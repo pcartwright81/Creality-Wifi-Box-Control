@@ -1,0 +1,13 @@
+{
+  "domain": "creality_wifi_box_control",
+  "name": "Creality Wifi Box Control",
+  "codeowners": ["@pcartwright81"],
+  "config_flow": true,
+  "version": "2024.14.1",
+  "requirements": ["aiohttp"],
+  "dependencies": [],
+  "codeowners": [],
+  "iot_class": "local_polling",
+  "documentation": "https://github.com/pcartwright81/Creality-Wifi-Box-Control",
+  "issue_tracker": "https://github.com/pcartwright81/Creality-Wifi-Box-Control/issues"
+}
