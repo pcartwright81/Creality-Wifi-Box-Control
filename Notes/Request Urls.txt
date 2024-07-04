@@ -1,0 +1,8 @@
+Status
+http://{boxIp}:81/protocal.csp?fname=Info&opt=main&function=get
+Pause is
+http://{boxIp}:81/protocal.csp?fname=net&opt=iot_conf&function=set&pause=1
+Resume is
+http://{boxIp}:81/protocal.csp?fname=net&opt=iot_conf&function=set&pause=1
+Stop is
+http://{boxIp}:81/protocal.csp?fname=net&opt=iot_conf&function=set&stop=1

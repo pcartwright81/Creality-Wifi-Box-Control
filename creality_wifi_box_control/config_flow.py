@@ -26,7 +26,8 @@ class CrealityControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema({
                 vol.Required("host"): cv.string,
-                vol.Required("port", default=81): cv.port
+                vol.Required("port", default=81): cv.port,
+                vol.Required("model"): cv.string
             }),
             errors=errors,
         )
@@ -41,7 +42,7 @@ class CrealityControlConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                         response = await resp.text()
                         if "printProgress" not in response:
                             return False 
-                        return True  # Assuming any response with printStatus not TOKEN_ERROR is valid
+                        return True  # Assuming any response with printStatus is valid
         except Exception as e:
             return None  # Unable to connect
         return None  # In case the connection could not be established or an unexpected error occurred

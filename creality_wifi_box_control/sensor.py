@@ -1,17 +1,18 @@
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import Entity
-from datetime import timedelta
+from datetime import datetime, timedelta
 from .const import DOMAIN
 
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up Creality Control sensors from a config entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     sensors = [
-        CrealitySensor(coordinator, "model", "Model"),
         CrealitySensor(coordinator, "wanip", "IP Address"),
         CrealitySensor(coordinator, "state", "Current State"),
         CrealitySensor(coordinator, "printProgress", "Job Percentage", unit_of_measurement="%"),
-        CrealityTimeLeftSensor(coordinator, "printLeftTime", "Time Left"),
+        CrealityTimeSensor(coordinator, "printJobTime", "Time Running"),
+        CrealityTimeSensor(coordinator, "printLeftTime", "Time Left"),
+        CrealitySensor(coordinator, "completionTime", "Completion Time"),        
         # CrealitySensor(coordinator, "print", "Filename"),
         CrealitySensor(coordinator, "nozzleTemp", "Nozzle Temp"),
         CrealitySensor(coordinator, "bedTemp", "Bed Temp"),
@@ -28,7 +29,7 @@ class CrealitySensor(CoordinatorEntity, Entity):
         super().__init__(coordinator)
         self.coordinator = coordinator
         self.data_key = data_key
-        self._attr_name = f"Creality {name_suffix}"
+        self._attr_name = f"{self.coordinator.config['model']} {name_suffix}"
         self._attr_unique_id = f"{coordinator.config['host']}_{data_key}"
         self._unit_of_measurement = unit_of_measurement
 
@@ -59,14 +60,17 @@ class CrealitySensor(CoordinatorEntity, Entity):
             error = self.coordinator.data.get("err", 0)
             if error == 0:
                 return "No"
-            if error > 0:
-                return "Yes"
+            return "Yes"
         if self.data_key == "upgradeStatus":
-            error = self.coordinator.data.get("upgradeStatus", 0)
-            if error == 0:
+            upgradeStatus = self.coordinator.data.get("upgradeStatus", 0)
+            if upgradeStatus == 0:
                 return "No"
-            if error == 1:
-                return "Yes"
+            return "Yes"
+        if self.data_key == "completionTime":
+            printTimeLeft = self.coordinator.data.get("printLeftTime", 0)
+            today = datetime.now()
+            completion = today + timedelta(0,printTimeLeft)
+            return completion.strftime("%m-%d-%Y %H:%M")
         return self.coordinator.data.get(self.data_key, "Unknown")
 
     @property
@@ -81,11 +85,11 @@ class CrealitySensor(CoordinatorEntity, Entity):
             "identifiers": {(DOMAIN, self.coordinator.config['host'])},
             "name": "Creality Printer",
             "manufacturer": "Creality",
-            "model": "Creality Printer",  # Update with your model, have not found a way to get this information
+            "model": {self.coordinator.config['model']}, #Todo set config from the first test connection.
         }
 
-class CrealityTimeLeftSensor(CrealitySensor):
-    """Specialized sensor class for handling 'Time Left' data."""
+class CrealityTimeSensor(CrealitySensor):
+    """Specialized sensor class for handling 'Time' data."""
 
     @property
     def state(self):

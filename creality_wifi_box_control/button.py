@@ -7,9 +7,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
     """Set up Creality Wifi Box buttons from a config entry."""
     coordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities([
-        CrealityControlButton(coordinator, "Pause Print", "PRINT_PAUSE"),
-        CrealityControlButton(coordinator, "Resume Print", "PRINT_RESUME"),
-        CrealityControlButton(coordinator, "Stop Print", "PRINT_STOP"),
+        CrealityControlButton(coordinator, f"{coordinator.config['model']} Pause Print", "PRINT_PAUSE"),
+        CrealityControlButton(coordinator, f"{coordinator.config['model']} Resume Print", "PRINT_RESUME"),
+        CrealityControlButton(coordinator, f"{coordinator.config['model']} Stop Print", "PRINT_STOP"),
     ])
 
 class CrealityControlButton(ButtonEntity):
@@ -30,7 +30,7 @@ class CrealityControlButton(ButtonEntity):
     def device_info(self):
         return {
             "identifiers": {(DOMAIN, self.coordinator.config['host'])},
-            "name": "Creality Wifi Box",
+            "name": self.coordinator.config['model'],
             "manufacturer": "Creality",
             # Add any other device info as needed
         }
