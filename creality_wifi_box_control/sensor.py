@@ -13,7 +13,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         CrealityTimeSensor(coordinator, "printJobTime", "Time Running"),
         CrealityTimeSensor(coordinator, "printLeftTime", "Time Left"),
         CrealitySensor(coordinator, "completionTime", "Completion Time"),        
-        # CrealitySensor(coordinator, "print", "Filename"),
+        CrealitySensor(coordinator, "print", "Filename"),
         CrealitySensor(coordinator, "nozzleTemp", "Nozzle Temp"),
         CrealitySensor(coordinator, "bedTemp", "Bed Temp"),
         CrealitySensor(coordinator, "err", "Error"),
@@ -49,12 +49,15 @@ class CrealitySensor(CoordinatorEntity, Entity):
         # Special handling for the "Status" sensor to calculate its value
         if self.data_key == "state":
             state = self.coordinator.data.get("state", 0)
+            connect = self.coordinator.data.get("connect", 0)        
+            if connect == 2:
+                return "Offline"
             if state == 1:
                 return "Printing"
             if state == 2:
                 return "Idle"
             if state == 4:
-                return "Offline"
+                return "Error" #Not sure about this one.
             return "Unable to parse status"
         if self.data_key == "err":
             error = self.coordinator.data.get("err", 0)
