@@ -10,8 +10,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
         CrealitySensor(coordinator, "wanip", "IP Address"),
         CrealitySensor(coordinator, "state", "Current State"),
         CrealitySensor(coordinator, "printProgress", "Job Percentage", unit_of_measurement="%"),
-        CrealityTimeSensor(coordinator, "printJobTime", "Time Running"),
-        CrealityTimeSensor(coordinator, "printLeftTime", "Time Left"),
+        CrealitySensor(coordinator, "printJobTime", "Time Running"),
+        CrealitySensor(coordinator, "printLeftTime", "Time Left"),
         CrealitySensor(coordinator, "completionTime", "Completion Time"),        
         CrealitySensor(coordinator, "print", "Filename"),
         CrealitySensor(coordinator, "nozzleTemp", "Nozzle Temp"),
@@ -46,34 +46,70 @@ class CrealitySensor(CoordinatorEntity, Entity):
     @property
     def state(self):
         """Return the state of the sensor."""
-        # Special handling for the "Status" sensor to calculate its value
-        if self.data_key == "state":
-            state = self.coordinator.data.get("state", 0)
-            connect = self.coordinator.data.get("connect", 0)        
-            if connect == 2:
-                return "Offline"
-            if state == 1:
-                return "Printing"
-            if state == 2:
-                return "Idle"
-            if state == 4:
-                return "Error" #Not sure about this one.
-            return "Unable to parse status"
-        if self.data_key == "err":
-            error = self.coordinator.data.get("err", 0)
-            if error == 0:
-                return "No"
-            return "Yes"
+        #Show this sensor even if the status of the printer is offline.
         if self.data_key == "upgradeStatus":
             upgradeStatus = self.coordinator.data.get("upgradeStatus", 0)
             if upgradeStatus == 0:
                 return "No"
             return "Yes"
+        
+        #Check the printer connection and return offline for most of the sensors.
+        connect = self.coordinator.data.get("connect", 0)        
+        if connect == 2:
+           return "Offline"
+        
+        state = self.coordinator.data.get("state", 0)
+        # Special handling for the "Status" sensor to calculate its value
+        if self.data_key == "state":
+            state = self.coordinator.data.get("state", 0)
+            if connect == 1:                
+                if state == 1:
+                    return "Printing"
+                if state == 2:
+                    return "Idle"
+                if state == 4:
+                    return "Error"#Not sure about this one.
+            return "Unable to parse status"
+        
+        #Error is a little tricky because it is retained until a new print job is successful.
+        if self.data_key == "err":
+            error = self.coordinator.data.get("err", 0)
+            if error == 0:
+                return "No"
+            return "Yes"
+
+        #These lines go against what the device tab in cura shows.
+
+        #Calculate the completion time
         if self.data_key == "completionTime":
+            if state != 1:
+                return ""
             printTimeLeft = self.coordinator.data.get("printLeftTime", 0)
             today = datetime.now()
             completion = today + timedelta(0,printTimeLeft)
             return completion.strftime("%m-%d-%Y %H:%M")
+        
+        #Convert the time running property
+        if self.data_key == "printJobTime":
+            if state != 1:
+                return ""
+            printJobTime = self.coordinator.data.get("printJobTime", 0)
+            return self.convertSecondsToReadableValue(printJobTime)
+        
+        #Convert the time left property
+        if self.data_key == "printLeftTime":
+            if state != 1:
+                return ""
+            printLeftTime = self.coordinator.data.get("printLeftTime", 0)
+            return self.convertSecondsToReadableValue(printLeftTime)
+        
+        #Set the job percentage to 0 if idle
+        if self.data_key == "printProgress":
+            if state != 1:
+                    return 0
+            return self.coordinator.data.get("printProgress", 0)
+        
+        #Return the default for sensors that are not above.
         return self.coordinator.data.get(self.data_key, "Unknown")
 
     @property
@@ -90,12 +126,8 @@ class CrealitySensor(CoordinatorEntity, Entity):
             "manufacturer": "Creality",
             "model": {self.coordinator.config['model']}, #Todo set config from the first test connection.
         }
-
-class CrealityTimeSensor(CrealitySensor):
-    """Specialized sensor class for handling 'Time' data."""
-
+    
     @property
-    def state(self):
-        """Return the state of the sensor, converting time to HH:MM:SS format."""
-        time_left = int(self.coordinator.data.get(self.data_key, 0))
+    def convertSecondsToReadableValue(seconds):
+        time_left = int(seconds)
         return str(timedelta(seconds=time_left))
